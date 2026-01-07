@@ -95,23 +95,23 @@ const { initSeatSockets } = require("./sockets/seatSocket");
 const app = express();
 const server = http.createServer(app);
 
-// ✅ 1) CORS MUST BE FIRST (before json, before routes)
+// ✅ CORS FIRST
+const FRONTEND_ORIGIN = process.env.CLIENT_ORIGIN;
+
 app.use(
   cors({
-    origin: "https://cinebook-site-frontend.onrender.com", // ✅ your frontend origin
+    origin: FRONTEND_ORIGIN, 
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   })
 );
 
-// ✅ 2) Explicitly handle preflight for ALL routes
-app.options("*", cors());
+// ✅ Express 5 safe preflight handler (NOT "*")
+app.options(/.*/, cors());
 
-// ✅ 3) JSON after CORS
 app.use(express.json());
 
-// ✅ Health
 app.get("/api/health", (req, res) => {
   res.json({ ok: true, service: "Cinema Booking API" });
 });
@@ -120,26 +120,22 @@ app.get("/api/health", (req, res) => {
 const { Server } = require("socket.io");
 const io = new Server(server, {
   cors: {
-    origin: "https://cinebook-site-frontend.onrender.com",
+    origin: FRONTEND_ORIGIN,
     methods: ["GET", "POST"],
     credentials: true,
   },
 });
 
-// ✅ make io available in routes/controllers
 app.set("io", io);
-
-// ✅ init seat sockets
 initSeatSockets(io);
 
-// ✅ routes
+// routes
 app.use("/api/auth", authRoutes);
 app.use("/api/movies", movieRoutes);
 app.use("/api/halls", hallRoutes);
 app.use("/api/shows", showRoutes);
 app.use("/api/bookings", bookingRoutes);
 
-// 404 + error handler
 app.use(notFound);
 app.use(errorHandler);
 
