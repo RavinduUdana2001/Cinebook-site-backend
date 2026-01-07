@@ -95,18 +95,21 @@ const { initSeatSockets } = require("./sockets/seatSocket");
 const app = express();
 const server = http.createServer(app);
 
-// ✅ Parse JSON
-app.use(express.json());
-
-// ✅ CORS (BEST for Render + localhost testing)
-// - origin: true reflects the request Origin automatically
-// - credentials: true keeps cookies/auth compatibility
+// ✅ 1) CORS MUST BE FIRST (before json, before routes)
 app.use(
   cors({
-    origin: true,
+    origin: "https://cinebook-site-frontend.onrender.com", // ✅ your frontend origin
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   })
 );
+
+// ✅ 2) Explicitly handle preflight for ALL routes
+app.options("*", cors());
+
+// ✅ 3) JSON after CORS
+app.use(express.json());
 
 // ✅ Health
 app.get("/api/health", (req, res) => {
@@ -117,7 +120,8 @@ app.get("/api/health", (req, res) => {
 const { Server } = require("socket.io");
 const io = new Server(server, {
   cors: {
-    origin: true,
+    origin: "https://cinebook-site-frontend.onrender.com",
+    methods: ["GET", "POST"],
     credentials: true,
   },
 });
@@ -135,7 +139,7 @@ app.use("/api/halls", hallRoutes);
 app.use("/api/shows", showRoutes);
 app.use("/api/bookings", bookingRoutes);
 
-// ✅ 404 + error handler
+// 404 + error handler
 app.use(notFound);
 app.use(errorHandler);
 
@@ -144,10 +148,7 @@ const PORT = process.env.PORT || 5000;
 (async () => {
   try {
     await connectDB(process.env.MONGO_URI);
-
-    server.listen(PORT, () => {
-      console.log(`✅ Server running on port ${PORT}`);
-    });
+    server.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
   } catch (err) {
     console.error("❌ Failed to start server:", err);
     process.exit(1);
