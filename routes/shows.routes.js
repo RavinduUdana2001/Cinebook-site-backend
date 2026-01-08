@@ -99,4 +99,40 @@ router.delete("/:id", authRequired, adminOnly, async (req, res, next) => {
   }
 });
 
+// ✅ PUT /api/shows/:id (admin) - update show
+router.put(
+  "/:id",
+  authRequired,
+  adminOnly,
+  [
+    body("movieId").optional().custom(isValidId).withMessage("Invalid movieId"),
+    body("hallId").optional().custom(isValidId).withMessage("Invalid hallId"),
+    body("startTime").optional().notEmpty().withMessage("startTime required"),
+    body("price").optional().isFloat({ min: 0 }).withMessage("price must be number"),
+  ],
+  validate,
+  async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      if (!isValidId(id)) return res.status(400).json({ message: "Invalid show id" });
+
+      const show = await Show.findById(id);
+      if (!show) return res.status(404).json({ message: "Show not found" });
+
+      const { movieId, hallId, startTime, price } = req.body;
+
+      if (movieId) show.movieId = movieId;
+      if (hallId) show.hallId = hallId;
+      if (startTime) show.startTime = new Date(startTime);
+      if (price !== undefined) show.price = Number(price);
+
+      await show.save();
+      res.json(show);
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+
 module.exports = router;
